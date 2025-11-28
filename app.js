@@ -1,100 +1,89 @@
+console.log("Loading TFJS model...");
+
+// ======== LOAD MODEL ========
 let model = null;
-let scalerMean = null;
-let scalerStd = null;
-
-// ----------------------
-// Load model + scaler
-// ----------------------
-async function loadResources() {
-    console.log("Loading TFJS model...");
-    model = await tf.loadLayersModel("model/model.json");
-    console.log("Model loaded.");
-
-    console.log("Loading scaler...");
-    const response = await fetch("scaler/nutrition_scaler.json");
-    const data = await response.json();
-    scalerMean = data.mean;
-    scalerStd = data.scale;
-    console.log("Scaler loaded:", scalerMean, scalerStd);
+async function loadModel() {
+    model = await tf.loadLayersModel("tfjs_model/model.json");
+    console.log("Model loaded:", model);
 }
 
-loadResources();
+loadModel();
 
+// ======== LOAD SCALER ========
+let scaler = null;
 
-// ----------------------
-// Image preprocessing
-// ----------------------
-function preprocessImage(imgElement) {
-    let tensor = tf.browser.fromPixels(imgElement)
-        .resizeNearestNeighbor([224, 224])
-        .toFloat()
-        .div(255.0)
-        .expandDims(0); // [1, 224, 224, 3]
-
-    return tensor;
-}
-
-
-// ----------------------
-// Inverse scaling
-// ----------------------
-function inverseScale(arr) {
-    let out = [];
-    for (let i = 0; i < arr.length; i++) {
-        out.push(arr[i] * scalerStd[i] + scalerMean[i]);
+async function loadScaler() {
+    try {
+        const resp = await fetch("nutrition_scaler.json");
+        scaler = await resp.json();
+        console.log("Scaler loaded:", scaler);
+    } catch (e) {
+        console.error("Scaler loading failed:", e);
     }
-    return out;
 }
 
+loadScaler();
 
-// ----------------------
-// Prediction pipeline
-// ----------------------
-async function predictNutrition() {
-    const img = document.getElementById("preview");
+// ======== IMAGE PREPROCESSING ========
+function preprocessImage(img) {
+    return tf.tidy(() => {
+        let tensor = tf.browser.fromPixels(img)
+            .resizeNearestNeighbor([224, 224])
+            .toFloat()
+            .div(255.0);
 
-    if (!model || !scalerMean) {
-        alert("Model or scaler not loaded yet. Please wait 1–2 seconds.");
+        return tensor.expandDims(0); // [1,224,224,3]
+    });
+}
+
+// ======== APPLY SCALER ========
+function descaleOutput(pred) {
+    if (!scaler) return pred; // fallback
+
+    const mean = tf.tensor(scaler.mean);
+    const scale = tf.tensor(scaler.scale);
+
+    return pred.mul(scale).add(mean);
+}
+
+// ======== MAIN PREDICTION ========
+async function predictImage(imgElement) {
+    if (!model) {
+        alert("Model not loaded yet!");
         return;
     }
+    const input = preprocessImage(imgElement);
 
-    const input = preprocessImage(img);
-    const pred = model.predict(input);
-    const values = await pred.data();
+    const rawPred = model.predict(input);
+    const unscaled = descaleOutput(rawPred);
 
-    const real = inverseScale(values);
+    const values = await unscaled.data();
 
-    displayResult(real);
+    rawPred.dispose();
+    unscaled.dispose();
+    input.dispose();
+
+    return values;
 }
 
-
-// ----------------------
-// Update UI
-// ----------------------
-function displayResult(v) {
-    const box = document.getElementById("result");
-    box.innerHTML = `
-        <h3>Estimated Nutrition</h3>
-        <p><b>Calories:</b> ${v[0].toFixed(1)}</p>
-        <p><b>Protein:</b> ${v[1].toFixed(1)} g</p>
-        <p><b>Fat:</b> ${v[2].toFixed(1)} g</p>
-        <p><b>Carbs:</b> ${v[3].toFixed(1)} g</p>
-    `;
-    box.style.display = "block";
-}
-
-
-// ----------------------
-// File input → preview
-// ----------------------
-document.getElementById("fileInput").addEventListener("change", function (e) {
-    const file = e.target.files[0];
+// ======== UI HANDLER ========
+document.getElementById("fileInput").addEventListener("change", async function (event) {
+    const file = event.target.files[0];
     if (!file) return;
 
-    const img = document.getElementById("preview");
+    let img = document.getElementById("preview");
     img.src = URL.createObjectURL(file);
 
-    img.onload = () => {
-        predictNutrition();
+    img.onload = async () => {
+        const result = await predictImage(img);
+        console.log("Prediction:", result);
+
+        document.getElementById("output").innerHTML = `
+            <h3>Nutrition estimation</h3>
+            <p>Calories: ${result[0].toFixed(2)}</p>
+            <p>Proteins: ${result[1].toFixed(2)}</p>
+            <p>Fats: ${result[2].toFixed(2)}</p>
+            <p>Carbs: ${result[3].toFixed(2)}</p>
+        `;
     };
 });
