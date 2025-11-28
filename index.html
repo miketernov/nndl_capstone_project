@@ -2,23 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Nutrition AI</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nutrition Estimator</title>
+
+    <!-- TFJS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0/dist/tf.min.js"></script>
+
+    <!-- Simple styling -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #fafafa;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        #preview {
+            max-width: 300px;
+            margin-top: 20px;
+            border-radius: 10px;
+        }
+
+        #output {
+            margin-top: 25px;
+            padding: 20px;
+            font-size: 18px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            display: none;
+        }
+
+        h1 { font-size: 30px; }
+    </style>
 </head>
+
 <body>
 
-    <h1>🍽️ Nutrition Estimator</h1>
+    <div class="container">
+        <h1>🍽 Nutrition Estimator</h1>
 
-    <div class="upload-box">
+        <p>Upload an image of food and get estimated nutrition.</p>
+
         <input type="file" id="fileInput" accept="image/*">
-        <p>Upload an image of a dish</p>
+
+        <img id="preview" src="" alt="">
+        
+        <div id="output"></div>
     </div>
 
-    <img id="preview" class="preview-img">
-
-    <div id="result" class="result-box"></div>
-
+    <!-- Your app code -->
     <script src="app.js"></script>
+
 </body>
 </html>
