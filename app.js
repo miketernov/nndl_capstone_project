@@ -26,7 +26,7 @@ function inverseTransform(pred) {
 // Load TF.js Model
 // ----------------------
 async function loadModel() {
-    model = await tf.loadGraphModel("model/model.json");
+    model = await tf.loadLayersModel("model/model.json");
     console.log("Model loaded.");
 }
 
