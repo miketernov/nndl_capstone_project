@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NutritionAI | Browser-based Food Nutrition Estimator</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            margin: 0;
+            background: linear-gradient(120deg, #e3f1ff 0%, #f6eafb 100%);
+            color: #374151;
+        }
+        .wrapper {
+            max-width: 1200px;
+            margin: 25px auto;
+            padding: 0 20px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.6rem;
+            font-weight: 700;
+            color: #42567a;
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.2rem;
+            color: #42567a;
+        }
+        .section-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 35px;
+            box-shadow: 0 8px 32px rgba(0, 88, 190, 0.08);
+            border: 1px solid #e5e8ef;
+        }
+        .file-inputs {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            padding: 20px;
+            background: #f0f4fc;
+            border-radius: 16px;
+            margin-bottom: 25px;
+        }
+        label {
+            font-weight: 600;
+            color: #42567a;
+        }
+        input[type="file"] {
+            padding: 10px;
+            border: 1px solid #9bb8e7;
+            border-radius: 8px;
+            background: #f6fafd;
+        }
+        button {
+            cursor: pointer;
+            background: linear-gradient(90deg, #4064eb 70%, #6f5eed 100%);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #2946c7 70%, #6157e5 100%);
+        }
+        #edaContainer, #previewContainer {
+            border: 1px solid #e5e8ef;
+            border-radius: 16px;
+            padding: 20px;
+            background: #f9f9fc;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 25px;
+        }
+        #trainingLogs {
+            white-space: pre-wrap;
+            min-height: 200px;
+            max-height: 350px;
+            overflow-y: auto;
+            background: #f9f9fc;
+            border: 1px solid #e5e8ef;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 6px #ddd;
+        }
+        #previewContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .status {
+            border: 1px solid #e5e8ef;
+            padding: 15px;
+            background: #f7faff;
+            border-radius: 12px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        @media(max-width:900px){
+            .container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="wrapper">
+
+    <!-- HEADER -->
+    <div class="section-card">
+        <h1>NutritionAI</h1>
+        <div class="subtitle">
+            Estimate calories, protein, fat and carbs directly in your browser using Neural Networks
+        </div>
+    </div>
+
+    <!-- DATA UPLOAD -->
+    <div class="section-card">
+        <h2>Load Nutrition5k Data</h2>
+        <div class="file-inputs">
+            <div>
+                <label>Training CSV</label><br>
+                <input type="file" id="trainFile" accept=".csv">
+            </div>
+            <div>
+                <label>Test CSV</label><br>
+                <input type="file" id="testFile" accept=".csv">
+            </div>
+
+            <button id="loadDataBtn">Load Data</button>
+        </div>
+
+        <!-- EDA -->
+        <div id="edaContainer">
+            <h3>EDA Results</h3>
+            <p style="color:#666;font-style:italic;">Load training data to see nutrition distribution</p>
+        </div>
+
+        <div class="container">
+            <!-- Left -->
+            <div>
+                <h3>Model Controls</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+                    <button id="trainBtn">Train</button>
+                    <button id="evaluateBtn">Evaluate</button>
+                    <button id="testFiveBtn">Test 5</button>
+                    <button id="saveModelBtn">Save Model</button>
+                    <button id="resetBtn">Reset</button>
+                </div>
+
+                <div id="modelInfo" class="status" style="margin-top:20px;">
+                    <h3>Model Info</h3>
+                    <p>No model loaded</p>
+                </div>
+
+                <div id="dataStatus" class="status" style="margin-top:20px;">
+                    <h3>Data Status</h3>
+                    <p>No data loaded</p>
+                </div>
+            </div>
+
+            <!-- Right -->
+            <div>
+                <h3>Training Logs</h3>
+                <div id="trainingLogs">Logs appear here…</div>
+
+                <h3 style="margin-top:25px;">Prediction Preview</h3>
+                <div id="previewContainer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="data-loader.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
