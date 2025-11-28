@@ -6,23 +6,13 @@ let scalerStd = null;
 // Load scaler.pkl
 // ----------------------
 async function loadScaler() {
-    const response = await fetch("scaler/nutrition_scaler.pkl");
-    const buffer = await response.arrayBuffer();
-    const text = new TextDecoder().decode(buffer);
+    const response = await fetch("scaler/nutrition_scaler.json");
+    const data = await response.json();
 
-    // parse mean_
-    const meanMatch = text.match(/mean_.*?\[(.*?)\]/s);
-    const scaleMatch = text.match(/scale_.*?\[(.*?)\]/s);
+    scalerMean = data.mean;
+    scalerStd  = data.scale;
 
-    if (!meanMatch || !scaleMatch) {
-        console.error("Scaler parsing failed!");
-        return;
-    }
-
-    scalerMean = meanMatch[1].trim().split(/\s+/).map(Number);
-    scalerStd = scaleMatch[1].trim().split(/\s+/).map(Number);
-
-    console.log("Scaler loaded.", scalerMean, scalerStd);
+    console.log("Scaler loaded:", scalerMean, scalerStd);
 }
 
 // ----------------------
