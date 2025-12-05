@@ -39,6 +39,7 @@
 
     h1 { margin: 0; font-size: 26px; }
     p { margin: 0; }
+
     .section-title {
       margin: 16px 0 8px;
       font-size: 13px; font-weight: 600; text-transform: uppercase;
@@ -85,9 +86,9 @@
       margin: 3px 4px 6px 0;
     }
 
-    /* Upload block */
     #file-input { display: none; }
     .upload-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
     #preview { max-width: 100%; max-height: 100%; }
     .preview-box {
       width: 170px; height: 170px;
@@ -108,7 +109,6 @@
     }
     th { color: #9ca3af; }
 
-    /* Daily Dashboard */
     #daily-progress {
       margin-top: 10px;
       padding: 12px;
@@ -133,6 +133,39 @@
       padding-left: 18px;
       font-size: 12px;
     }
+
+    /* LIGHT THEME */
+    .light body {
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .light .container {
+      background: white;
+      border-color: #e5e7eb;
+    }
+
+    .light .card {
+      background: #ffffff;
+      border-color: #d1d5db;
+    }
+
+    .light input, .light select {
+      background: #f9fafb;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+
+    .light #daily-progress, .light #tips {
+      background: #f9fafb;
+      color: #1f2937;
+    }
+
+    .light table td, 
+    .light table th {
+      border-color: #e5e7eb;
+      color: #1f2937;
+    }
   </style>
 </head>
 
@@ -142,6 +175,11 @@
     <!-- LEFT SIDE -->
     <div>
       <h1>NutritionAI — Smart Nutrition Coach</h1>
+
+      <button class="btn" onclick="toggleTheme()" style="background:#3b82f6;color:white;">
+        Toggle Theme
+      </button>
+
       <p class="subtitle">Personalized nutrition recommendations + AI food analysis + analytics.</p>
 
       <!-- USER PROFILE -->
@@ -222,10 +260,9 @@
 
       <button class="btn" onclick="exportCSV()">Export CSV</button>
       <button class="btn" onclick="exportJSON()">Export JSON</button>
-
     </div>
 
-    <!-- RIGHT SIDE: INFO -->
+    <!-- RIGHT COLUMN -->
     <div class="right-col">
       <h2>About the project</h2>
       <p>NutritionAI combines personal metabolic calculations with AI-based dish nutrition estimation.</p>
@@ -235,7 +272,7 @@
         <li>Personalized calorie & macro targets</li>
         <li>AI analysis of meal photos</li>
         <li>Daily nutrition dashboard</li>
-        <li>Smart health recommendations</li>
+        <li>Smart recommendations</li>
         <li>Graphs & meal history</li>
         <li>CSV & JSON export</li>
       </ul>
