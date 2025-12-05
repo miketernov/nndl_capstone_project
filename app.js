@@ -40,6 +40,18 @@ function toggleTheme() {
 }
 
 // -------------------------------------------------------------
+// HELP FIX NOTIFICATIONS
+// -------------------------------------------------------------
+function helpFixNotifications() {
+  alert(
+    "To enable notifications:\n" +
+    "1. Click the 🔒 icon next to the address bar.\n" +
+    "2. Select 'Site settings'.\n" +
+    "3. Find 'Notifications' and set it to 'Allow'."
+  );
+}
+
+// -------------------------------------------------------------
 // MODEL LOADING
 // -------------------------------------------------------------
 function getModelUrl() {
@@ -69,24 +81,27 @@ window.addEventListener("load", async () => {
   loadStateFromStorage();
   rebuildUIFromState();
   checkLongNoMealNotification();
+
+  notifCaloriesExceededSent = false;
 });
 
 // -------------------------------------------------------------
 // PROFILE PLAN
 // -------------------------------------------------------------
 function calculatePlan() {
-  const age      = +document.getElementById("age").value;
-  const weight   = +document.getElementById("weight").value;
-  const height   = +document.getElementById("height").value;
-  const activity = +document.getElementById("activity").value;
-  const goal     = document.getElementById("goal").value;
+  const username  = document.getElementById("username").value.trim();
+  const age       = +document.getElementById("age").value;
+  const weight    = +document.getElementById("weight").value;
+  const height    = +document.getElementById("height").value;
+  const activity  = +document.getElementById("activity").value;
+  const goal      = document.getElementById("goal").value;
 
   if (!age || !weight || !height) {
     alert("Please fill out age, weight and height.");
     return;
   }
 
-  // Mifflin-St Jeor (male, как базовый вариант)
+  // Mifflin-St Jeor (male baseline)
   let bmr  = 10 * weight + 6.25 * height - 5 * age + 5;
   let tdee = bmr * activity;
 
@@ -99,7 +114,10 @@ function calculatePlan() {
 
   dailyPlan = { tdee, protein, fat, carbs };
 
-  document.getElementById("recommendations").innerHTML = `
+  const rec = document.getElementById("recommendations");
+
+  rec.innerHTML = `
+    <p>👋 Welcome${username ? ", <b>" + username + "</b>" : ""}!</p>
     <p><b>Daily calories:</b> ${Math.round(tdee)} kcal</p>
     <p><b>Protein:</b> ${Math.round(protein)} g</p>
     <p><b>Fat:</b> ${Math.round(fat)} g</p>
@@ -108,6 +126,8 @@ function calculatePlan() {
 
   saveProfileToStorage();
   ensureNotificationPermission();
+
+  notifCaloriesExceededSent = false;
 
   renderDailyProgress();
   updateTips();
@@ -226,6 +246,11 @@ function updateDailyStats(p) {
   });
 
   renderDailyProgress();
+
+  if (dailyPlan && dailyStats.calories > dailyPlan.tdee && !notifCaloriesExceededSent) {
+    sendNotification("you exceeded your daily calorie target.");
+    notifCaloriesExceededSent = true;
+  }
 }
 
 function updateMealTypeStats(p) {
@@ -267,22 +292,17 @@ function updateTips() {
 
   const msgs = [];
 
-  if (dailyStats.calories > dailyPlan.tdee) {
+  if (dailyStats.calories > dailyPlan.tdee)
     msgs.push("⚠️ You exceeded your daily calorie limit.");
-    if (!notifCaloriesExceededSent) {
-      sendNotification("You exceeded your daily calorie target.");
-      notifCaloriesExceededSent = true;
-    }
-  }
 
   if (dailyStats.protein < dailyPlan.protein * 0.4)
-    msgs.push("🍗 Too little protein — add eggs, chicken or cottage cheese.");
+    msgs.push("🍗 Too little protein — add chicken or eggs.");
 
   if (dailyStats.carbs < dailyPlan.carbs * 0.4)
-    msgs.push("🍚 Low carbs — add rice, pasta or fruit.");
+    msgs.push("🍚 Low carbs — add rice, bread or fruit.");
 
   if (dailyStats.fat < dailyPlan.fat * 0.4)
-    msgs.push("🥑 Increase healthy fats — nuts, avocado, olive oil.");
+    msgs.push("🥑 Low healthy fats — add nuts or avocado.");
 
   tipsEl.innerHTML = msgs.length ? msgs.join("<br>") : "👌 Balanced day!";
 }
@@ -485,14 +505,18 @@ function downloadFile(filename, content) {
 // -------------------------------------------------------------
 function saveProfileToStorage() {
   if (typeof localStorage === "undefined") return;
+
+  const username = document.getElementById("username").value.trim();
+
   const profile = {
-    username: document.getElementById("username").value,
+    username: username || null,
     age: document.getElementById("age").value,
     weight: document.getElementById("weight").value,
     height: document.getElementById("height").value,
     activity: document.getElementById("activity").value,
     goal: document.getElementById("goal").value
   };
+
   try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   } catch (_) {}
@@ -500,18 +524,22 @@ function saveProfileToStorage() {
 
 function loadProfileFromStorage() {
   if (typeof localStorage === "undefined") return;
+
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
     if (!raw) return;
+
     const p = JSON.parse(raw);
-    if (p.username) document.getElementById("username").value = p.username;
+
+    if (p.username !== null && p.username !== "")
+      document.getElementById("username").value = p.username;
+
     if (p.age)      document.getElementById("age").value = p.age;
     if (p.weight)   document.getElementById("weight").value = p.weight;
     if (p.height)   document.getElementById("height").value = p.height;
     if (p.activity) document.getElementById("activity").value = p.activity;
     if (p.goal)     document.getElementById("goal").value = p.goal;
 
-    // авторасчёт плана
     calculatePlan();
   } catch (_) {}
 }
@@ -530,6 +558,7 @@ function saveStateToStorage() {
 
 function loadStateFromStorage() {
   if (typeof localStorage === "undefined") return;
+
   try {
     const raw = localStorage.getItem(STATE_KEY);
     if (!raw) return;
@@ -591,6 +620,7 @@ function saveLastMealTimestamp() {
 // -------------------------------------------------------------
 function ensureNotificationPermission() {
   if (typeof Notification === "undefined") return;
+
   if (Notification.permission === "default") {
     Notification.requestPermission();
   }
@@ -600,14 +630,13 @@ function sendNotification(message) {
   if (typeof Notification === "undefined") return;
   if (Notification.permission !== "granted") return;
 
-  const username = document.getElementById("username").value || "User";
+  const username = document.getElementById("username").value.trim() || "User";
 
   try {
     new Notification(`${username}, ${message}`);
   } catch (_) {}
 }
 
-// Напоминание, если давно не было приёма пищи
 function checkLongNoMealNotification() {
   if (typeof localStorage === "undefined") return;
   if (typeof Notification === "undefined") return;
@@ -615,6 +644,7 @@ function checkLongNoMealNotification() {
   try {
     const raw = localStorage.getItem(LAST_MEAL_KEY);
     if (!raw) return;
+
     const last = Number(raw);
     if (!last) return;
 
@@ -622,7 +652,7 @@ function checkLongNoMealNotification() {
     const diffHours = (now - last) / (1000 * 60 * 60);
 
     if (diffHours > 4 && Notification.permission === "granted") {
-      sendNotification("You haven't logged a meal for more than 4 hours. Time to eat?");
+      sendNotification("you haven't logged a meal in over 4 hours.");
     }
   } catch (_) {}
 }
