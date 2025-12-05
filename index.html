@@ -1,66 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nutrition Estimator</title>
+  <meta charset="UTF-8" />
+  <title>NutritionAI – Personalized Nutrition Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- TFJS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0/dist/tf.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-    <!-- Simple styling -->
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #fafafa;
-            text-align: center;
-            padding: 40px;
-        }
+  <style>
+    * { box-sizing: border-box; }
 
-        .container {
-            max-width: 600px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 14px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 60%);
+      color: #f9fafb;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px 48px;
+    }
 
-        #preview {
-            max-width: 300px;
-            margin-top: 20px;
-            border-radius: 10px;
-        }
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      background: #020617;
+      border-radius: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 24px 24px 28px;
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+      gap: 24px;
+    }
 
-        #output {
-            margin-top: 25px;
-            padding: 20px;
-            font-size: 18px;
-            background: #f0f0f0;
-            border-radius: 10px;
-            display: none;
-        }
+    @media (max-width: 960px) {
+      .container { grid-template-columns: 1fr; }
+    }
 
-        h1 { font-size: 30px; }
-    </style>
+    h1 { margin: 0; font-size: 26px; }
+    p { margin: 0; }
+    .section-title {
+      margin: 16px 0 8px;
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      color: #9ca3af; letter-spacing: 0.08em;
+    }
+
+    .card {
+      background: #020617;
+      border-radius: 16px;
+      border: 1px solid #1f2937;
+      padding: 14px 16px 16px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #f1f5f9;
+      font-size: 13px;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      background: #22c55e;
+      color: #022c16;
+      margin: 3px 4px 6px 0;
+    }
+
+    /* Upload block */
+    #file-input { display: none; }
+    .upload-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    #preview { max-width: 100%; max-height: 100%; }
+    .preview-box {
+      width: 170px; height: 170px;
+      border-radius: 16px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 12px;
+    }
+    th, td {
+      padding: 7px 8px;
+      border-bottom: 1px solid #1f2937;
+      text-align: left;
+    }
+    th { color: #9ca3af; }
+
+    /* Daily Dashboard */
+    #daily-progress {
+      margin-top: 10px;
+      padding: 12px;
+      background: #0f172a;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      font-size: 13px;
+    }
+
+    #tips {
+      margin-top: 10px;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      font-size: 13px;
+      color: #d1d5db;
+    }
+
+    #meal-history {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12px;
+    }
+  </style>
 </head>
 
 <body>
+  <div class="container">
 
-    <div class="container">
-        <h1>🍽 Nutrition Estimator</h1>
+    <!-- LEFT SIDE -->
+    <div>
+      <h1>NutritionAI — Smart Nutrition Coach</h1>
+      <p class="subtitle">Personalized nutrition recommendations + AI food analysis + analytics.</p>
 
-        <p>Upload an image of food and get estimated nutrition.</p>
+      <!-- USER PROFILE -->
+      <div class="section-title">Your profile</div>
+      <div class="card">
 
-        <input type="file" id="fileInput" accept="image/*">
+        <div class="profile-grid">
+          <input id="age" type="number" placeholder="Age" />
+          <input id="weight" type="number" placeholder="Weight (kg)" />
+          <input id="height" type="number" placeholder="Height (cm)" />
+          <select id="activity">
+            <option value="1.2">Low activity</option>
+            <option value="1.375">Light (1–3 workouts/week)</option>
+            <option value="1.55">Moderate (3–5 workouts/week)</option>
+            <option value="1.725">High (6–7 workouts/week)</option>
+            <option value="1.9">Very high</option>
+          </select>
+          <select id="goal">
+            <option value="loss">Lose weight</option>
+            <option value="maintain">Maintain</option>
+            <option value="gain">Gain weight</option>
+          </select>
+        </div>
 
-        <img id="preview" src="" alt="">
-        
-        <div id="output"></div>
+        <button class="btn" onclick="calculatePlan()">Calculate plan</button>
+
+        <div id="recommendations"></div>
+      </div>
+
+      <!-- DAILY DASHBOARD -->
+      <div class="section-title">Your daily progress</div>
+      <div id="daily-progress">No meals added yet.</div>
+
+      <div id="tips"></div>
+
+      <!-- UPLOAD -->
+      <div class="section-title">Upload meal</div>
+
+      <div class="card">
+        <div class="upload-row">
+          <label for="file-input" class="btn">Choose image</label>
+          <input id="file-input" type="file" accept="image/png,image/jpeg" />
+          <span class="file-label">Upload a meal photo</span>
+        </div>
+
+        <p id="status">Model is loading…</p>
+
+        <div class="preview-box">
+          <img id="preview" alt="Preview" />
+        </div>
+
+        <div class="section-title" style="margin-top:12px;">Predicted nutrients</div>
+        <table>
+          <tbody>
+            <tr><td>Calories</td><td id="calories">–</td><td>kcal</td></tr>
+            <tr><td>Fat</td><td id="fat">–</td><td>g</td></tr>
+            <tr><td>Carbs</td><td id="carbs">–</td><td>g</td></tr>
+            <tr><td>Protein</td><td id="protein">–</td><td>g</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="section-title">Analytics</div>
+
+      <div class="card">
+        <canvas id="calorieChart" height="130"></canvas>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <canvas id="macroChart" height="150"></canvas>
+      </div>
+
+      <div class="section-title">Meal history</div>
+      <div class="card">
+        <ul id="meal-history"></ul>
+      </div>
+
+      <button class="btn" onclick="exportCSV()">Export CSV</button>
+      <button class="btn" onclick="exportJSON()">Export JSON</button>
+
     </div>
 
-    <!-- Your app code -->
-    <script src="app.js"></script>
+    <!-- RIGHT SIDE: INFO -->
+    <div class="right-col">
+      <h2>About the project</h2>
+      <p>NutritionAI combines personal metabolic calculations with AI-based dish nutrition estimation.</p>
 
+      <h2>Features</h2>
+      <ul>
+        <li>Personalized calorie & macro targets</li>
+        <li>AI analysis of meal photos</li>
+        <li>Daily nutrition dashboard</li>
+        <li>Smart health recommendations</li>
+        <li>Graphs & meal history</li>
+        <li>CSV & JSON export</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
