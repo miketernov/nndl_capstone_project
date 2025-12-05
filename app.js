@@ -486,6 +486,7 @@ function downloadFile(filename, content) {
 function saveProfileToStorage() {
   if (typeof localStorage === "undefined") return;
   const profile = {
+    username: document.getElementById("username").value,
     age: document.getElementById("age").value,
     weight: document.getElementById("weight").value,
     height: document.getElementById("height").value,
@@ -503,6 +504,7 @@ function loadProfileFromStorage() {
     const raw = localStorage.getItem(PROFILE_KEY);
     if (!raw) return;
     const p = JSON.parse(raw);
+    if (p.username) document.getElementById("username").value = p.username;
     if (p.age)      document.getElementById("age").value = p.age;
     if (p.weight)   document.getElementById("weight").value = p.weight;
     if (p.height)   document.getElementById("height").value = p.height;
@@ -597,11 +599,12 @@ function ensureNotificationPermission() {
 function sendNotification(message) {
   if (typeof Notification === "undefined") return;
   if (Notification.permission !== "granted") return;
+
+  const username = document.getElementById("username").value || "User";
+
   try {
-    new Notification(message);
-  } catch (_) {
-    // некоторые браузеры могут блокировать без user gesture
-  }
+    new Notification(`${username}, ${message}`);
+  } catch (_) {}
 }
 
 // Напоминание, если давно не было приёма пищи
