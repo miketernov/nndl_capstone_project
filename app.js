@@ -95,6 +95,16 @@ function getSelectedMealType() {
   return "unknown";
 }
 
+// Pretty names for charts
+function mealTypeToLabel(type) {
+  return {
+    breakfast: "Breakfast",
+    lunch: "Lunch",
+    dinner: "Dinner",
+    snack: "Snack"
+  }[type] || "Meal";
+}
+
 // -------------------------------------------------------------
 // IMAGE HANDLING
 // -------------------------------------------------------------
@@ -194,7 +204,7 @@ function updateMealTypeStats(p) {
 }
 
 // -------------------------------------------------------------
-// PROGRESS
+// DAILY PROGRESS
 // -------------------------------------------------------------
 function renderDailyProgress() {
   const box = document.getElementById("daily-progress");
@@ -213,34 +223,31 @@ function renderDailyProgress() {
 }
 
 // -------------------------------------------------------------
-// TIPS / RECOMMENDATIONS
+// SMART TIPS
 // -------------------------------------------------------------
 function updateTips() {
   const tips = document.getElementById("tips");
-  if (!dailyPlan) {
-    tips.textContent = "";
-    return;
-  }
+  if (!dailyPlan) return (tips.textContent = "");
 
   let msg = [];
 
   if (dailyStats.calories > dailyPlan.tdee)
-    msg.push("⚠️ You exceeded your daily calorie limit!");
+    msg.push("⚠️ You exceeded your daily calorie limit.");
 
   if (dailyStats.protein < dailyPlan.protein * 0.4)
-    msg.push("🍗 Too little protein — add eggs, chicken or cottage cheese.");
+    msg.push("🍗 Too little protein — add eggs or chicken.");
 
   if (dailyStats.carbs < dailyPlan.carbs * 0.4)
-    msg.push("🍚 Low carbs — add rice, pasta or fruit.");
+    msg.push("🍚 Add more carbs — rice, fruit or pasta.");
 
   if (dailyStats.fat < dailyPlan.fat * 0.4)
-    msg.push("🥑 Increase healthy fats — nuts, avocado, olive oil.");
+    msg.push("🥑 Add healthy fats — nuts or avocado.");
 
-  tips.innerHTML = msg.length ? msg.join("<br>") : "👌 Balanced day so far.";
+  tips.innerHTML = msg.length ? msg.join("<br>") : "👌 Balanced day!";
 }
 
 // -------------------------------------------------------------
-// CHARTS
+// CHARTS (with datalabels)
 // -------------------------------------------------------------
 let calorieChart = null;
 let macroChart = null;
@@ -252,31 +259,60 @@ function initCharts() {
 
   calorieChart = new Chart(ctx1, {
     type: "line",
+    plugins: [ChartDataLabels],
     data: {
       labels: [],
       datasets: [{
         label: "Calories per meal",
         data: [],
         borderWidth: 2,
-        borderColor: "#22c55e"
+        borderColor: "#22c55e",
+        pointRadius: 4,
+        tension: 0.2
       }]
+    },
+    options: {
+      plugins: {
+        datalabels: {
+          align: "top",
+          anchor: "center",
+          color: "#fff",
+          formatter: (v, ctx) => {
+            return ctx.chart.data.labels[ctx.dataIndex];
+          }
+        }
+      }
     }
   });
 
   macroChart = new Chart(ctx2, {
     type: "bar",
+    plugins: [ChartDataLabels],
     data: {
       labels: ["Protein", "Fat", "Carbs"],
       datasets: [{
+        label: "Macros (g)",
         data: [0,0,0],
         backgroundColor: ["#3b82f6", "#ef4444", "#f59e0b"]
       }]
+    },
+    options: {
+      plugins: {
+        datalabels: {
+          anchor: "end",
+          align: "top",
+          color: "#fff",
+          formatter: v => Math.round(v)
+        }
+      }
     }
   });
 }
 
 function updateCharts(p) {
-  calorieChart.data.labels.push(mealHistory.length);
+  calorieChart.data.labels.push(
+    mealTypeToLabel(mealHistory[mealHistory.length - 1].mealType)
+  );
   calorieChart.data.datasets[0].data.push(p.calories);
   calorieChart.update();
 
@@ -289,20 +325,31 @@ function updateCharts(p) {
 }
 
 // -------------------------------------------------------------
-// MEAL TYPE CHART
+// MEAL TYPE CHART (Calories by breakfast/lunch/etc.)
 // -------------------------------------------------------------
 function initMealTypeChart() {
   const ctx = document.getElementById("mealTypeChart");
 
   mealTypeChart = new Chart(ctx, {
     type: "bar",
+    plugins: [ChartDataLabels],
     data: {
       labels: ["Breakfast", "Lunch", "Dinner", "Snack"],
       datasets: [{
         label: "Calories",
         data: [0,0,0,0],
-        backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
+        backgroundColor: ["#3b82f6","#10b981","#f59e0b","#ef4444"]
       }]
+    },
+    options: {
+      plugins: {
+        datalabels: {
+          anchor: "end",
+          align: "top",
+          color: "#fff",
+          formatter: v => Math.round(v)
+        }
+      }
     }
   });
 }
@@ -314,6 +361,7 @@ function updateMealTypeChart() {
     mealTypeStats.dinner.cal,
     mealTypeStats.snack.cal
   ];
+
   mealTypeChart.update();
 }
 
@@ -325,7 +373,7 @@ function renderHistory() {
 
   list.innerHTML = mealHistory
     .map(m => `
-      <li><b>${m.mealType.toUpperCase()}</b> — ${m.time}: 
+      <li><b>${mealTypeToLabel(m.mealType)}</b> — ${m.time}: 
       ${m.calories} kcal (P:${m.protein}, F:${m.fat}, C:${m.carbs})</li>
     `)
     .join("");
