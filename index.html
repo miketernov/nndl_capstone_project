@@ -131,6 +131,7 @@
       text-align: left;
       border-bottom: 1px solid #1f2937;
     }
+
     th {
       font-weight: 600;
       color: #9ca3af;
@@ -197,9 +198,14 @@
         Toggle Theme
       </button>
 
+      <button class="btn" onclick="helpFixNotifications()" style="background:#facc15;color:black;">
+        Fix Notifications
+      </button>
+
       <!-- PROFILE -->
       <div class="section-title">Your profile</div>
       <div class="card">
+
         <div class="profile-grid">
           <input id="username" type="text" placeholder="Name" />
           <input id="age" type="number" placeholder="Age" />
@@ -276,7 +282,7 @@
       </div>
 
       <div class="card" style="margin-top:12px;">
-        <h3 style="font-size:14px;margin-bottom:6px;">Calories by meal type</h3>
+        <div style="font-size:14px;margin-bottom:6px;">Calories by meal type</div>
         <canvas id="mealTypeChart" height="150"></canvas>
       </div>
 
