@@ -10,6 +10,13 @@ let dailyStats = { calories: 0, protein: 0, fat: 0, carbs: 0 };
 let dailyPlan = null;
 let mealHistory = [];
 
+let mealTypeStats = {
+  breakfast: {cal:0,p:0,f:0,c:0},
+  lunch:     {cal:0,p:0,f:0,c:0},
+  dinner:    {cal:0,p:0,f:0,c:0},
+  snack:     {cal:0,p:0,f:0,c:0},
+};
+
 // ------------------------ THEME SWITCH ------------------------
 function toggleTheme() {
   document.documentElement.classList.toggle("light");
@@ -29,19 +36,20 @@ window.addEventListener("load", async () => {
   try {
     s.textContent = "Loading model...";
     model = await tf.loadGraphModel(getModelUrl());
-    s.textContent = "Model loaded. Upload a meal.";
+    s.textContent = "Model loaded.";
   } catch (e) {
-    console.error("Model load error:", e);
+    console.error("Model error:", e);
     s.textContent = "Failed to load model.";
   }
 
   document.getElementById("file-input").addEventListener("change", handleFileChange);
 
   initCharts();
+  initMealTypeChart();
 });
 
 // -------------------------------------------------------------
-// USER PLAN CALCULATION
+// PROFILE PLAN
 // -------------------------------------------------------------
 function calculatePlan() {
   const age = +document.getElementById("age").value;
@@ -51,7 +59,7 @@ function calculatePlan() {
   const goal = document.getElementById("goal").value;
 
   if (!age || !weight || !height) {
-    alert("Please fill all fields.");
+    alert("Please fill out all fields.");
     return;
   }
 
@@ -79,12 +87,20 @@ function calculatePlan() {
 }
 
 // -------------------------------------------------------------
+// MEAL TYPE GETTER
+// -------------------------------------------------------------
+function getSelectedMealType() {
+  const radios = document.querySelectorAll('input[name="mealType"]');
+  for (let r of radios) if (r.checked) return r.value;
+  return "unknown";
+}
+
+// -------------------------------------------------------------
 // IMAGE HANDLING
 // -------------------------------------------------------------
 function handleFileChange(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (!model) return alert("Model not loaded.");
 
   const reader = new FileReader();
   reader.onload = () => {
@@ -92,11 +108,14 @@ function handleFileChange(e) {
 
     img.onload = async () => {
       document.getElementById("status").textContent = "Predicting...";
+
       const pred = await runInferenceOnImage(img);
 
       updateResults(pred);
       updateDailyStats(pred);
       updateCharts(pred);
+      updateMealTypeStats(pred);
+      updateMealTypeChart();
       renderHistory();
       updateTips();
 
@@ -121,22 +140,20 @@ function runInferenceOnImage(img) {
     const y = model.execute(x, "Identity:0");
     const vals = y.dataSync();
 
-    const den = vals.map((v, i) => v * NUTRITION_STD[i] + NUTRITION_MEAN[i]);
+    const d = vals.map((v, i) => v * NUTRITION_STD[i] + NUTRITION_MEAN[i]);
 
     return {
-      calories: round1(den[0]),
-      mass: round1(den[1]),
-      fat: round1(den[2]),
-      carbs: round1(den[3]),
-      protein: round1(den[4])
+      calories: Math.round(d[0]),
+      mass: d[1],
+      fat: Math.round(d[2]),
+      carbs: Math.round(d[3]),
+      protein: Math.round(d[4])
     };
   });
 }
 
-function round1(x) { return Math.round(x * 10) / 10; }
-
 // -------------------------------------------------------------
-// UI UPDATE
+// UPDATE UI
 // -------------------------------------------------------------
 function updateResults(p) {
   document.getElementById("calories").textContent = p.calories;
@@ -151,8 +168,11 @@ function updateDailyStats(p) {
   dailyStats.carbs += p.carbs;
   dailyStats.protein += p.protein;
 
+  const type = getSelectedMealType();
+
   mealHistory.push({
     time: new Date().toLocaleTimeString(),
+    mealType: type,
     calories: p.calories,
     protein: p.protein,
     fat: p.fat,
@@ -162,55 +182,69 @@ function updateDailyStats(p) {
   renderDailyProgress();
 }
 
+// -------------------------------------------------------------
+// MEAL TYPE STATS
+// -------------------------------------------------------------
+function updateMealTypeStats(p) {
+  const type = getSelectedMealType();
+  mealTypeStats[type].cal += p.calories;
+  mealTypeStats[type].p += p.protein;
+  mealTypeStats[type].f += p.fat;
+  mealTypeStats[type].c += p.carbs;
+}
+
+// -------------------------------------------------------------
+// PROGRESS
+// -------------------------------------------------------------
 function renderDailyProgress() {
   const box = document.getElementById("daily-progress");
 
   if (!dailyPlan) {
-    box.textContent = "Enter your profile to see daily stats.";
+    box.textContent = "Set your profile to see progress.";
     return;
   }
 
   box.innerHTML = `
-    <p>Calories: ${Math.round(dailyStats.calories)} / ${Math.round(dailyPlan.tdee)}</p>
-    <p>Protein: ${Math.round(dailyStats.protein)} / ${Math.round(dailyPlan.protein)} g</p>
-    <p>Fat: ${Math.round(dailyStats.fat)} / ${Math.round(dailyPlan.fat)} g</p>
-    <p>Carbs: ${Math.round(dailyStats.carbs)} / ${Math.round(dailyPlan.carbs)} g</p>
+    <p>Calories: ${dailyStats.calories} / ${Math.round(dailyPlan.tdee)}</p>
+    <p>Protein: ${dailyStats.protein} / ${Math.round(dailyPlan.protein)} g</p>
+    <p>Fat: ${dailyStats.fat} / ${Math.round(dailyPlan.fat)} g</p>
+    <p>Carbs: ${dailyStats.carbs} / ${Math.round(dailyPlan.carbs)} g</p>
   `;
 }
 
 // -------------------------------------------------------------
-// SMART TIPS
+// TIPS / RECOMMENDATIONS
 // -------------------------------------------------------------
 function updateTips() {
   const tips = document.getElementById("tips");
-
   if (!dailyPlan) {
     tips.textContent = "";
     return;
   }
 
-  let arr = [];
+  let msg = [];
 
   if (dailyStats.calories > dailyPlan.tdee)
-    arr.push("⚠️ You exceeded your daily calorie limit!");
+    msg.push("⚠️ You exceeded your daily calorie limit!");
 
-  if (dailyStats.protein < dailyPlan.protein * 0.6)
-    arr.push("🍗 Add more protein sources (eggs, chicken, cottage cheese).");
+  if (dailyStats.protein < dailyPlan.protein * 0.4)
+    msg.push("🍗 Too little protein — add eggs, chicken or cottage cheese.");
 
-  if (dailyStats.carbs < dailyPlan.carbs * 0.5)
-    arr.push("🍚 Low carbs — add grains, fruits or rice.");
+  if (dailyStats.carbs < dailyPlan.carbs * 0.4)
+    msg.push("🍚 Low carbs — add rice, pasta or fruit.");
 
-  if (dailyStats.fat < dailyPlan.fat * 0.5)
-    arr.push("🥑 You need more healthy fats (nuts, avocado, fish).");
+  if (dailyStats.fat < dailyPlan.fat * 0.4)
+    msg.push("🥑 Increase healthy fats — nuts, avocado, olive oil.");
 
-  tips.innerHTML = arr.length ? arr.join("<br>") : "👌 Perfect balance today!";
+  tips.innerHTML = msg.length ? msg.join("<br>") : "👌 Balanced day so far.";
 }
 
 // -------------------------------------------------------------
-// ANALYTICS — CHARTS
+// CHARTS
 // -------------------------------------------------------------
 let calorieChart = null;
 let macroChart = null;
+let mealTypeChart = null;
 
 function initCharts() {
   const ctx1 = document.getElementById("calorieChart");
@@ -226,8 +260,7 @@ function initCharts() {
         borderWidth: 2,
         borderColor: "#22c55e"
       }]
-    },
-    options: { responsive: true, plugins: { legend: { display: false } } }
+    }
   });
 
   macroChart = new Chart(ctx2, {
@@ -235,11 +268,10 @@ function initCharts() {
     data: {
       labels: ["Protein", "Fat", "Carbs"],
       datasets: [{
-        data: [0, 0, 0],
-        backgroundColor: ["#3b82f6", "#f43f5e", "#f59e0b"]
+        data: [0,0,0],
+        backgroundColor: ["#3b82f6", "#ef4444", "#f59e0b"]
       }]
-    },
-    options: { responsive: true }
+    }
   });
 }
 
@@ -257,31 +289,63 @@ function updateCharts(p) {
 }
 
 // -------------------------------------------------------------
-// MEAL HISTORY
+// MEAL TYPE CHART
+// -------------------------------------------------------------
+function initMealTypeChart() {
+  const ctx = document.getElementById("mealTypeChart");
+
+  mealTypeChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Breakfast", "Lunch", "Dinner", "Snack"],
+      datasets: [{
+        label: "Calories",
+        data: [0,0,0,0],
+        backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
+      }]
+    }
+  });
+}
+
+function updateMealTypeChart() {
+  mealTypeChart.data.datasets[0].data = [
+    mealTypeStats.breakfast.cal,
+    mealTypeStats.lunch.cal,
+    mealTypeStats.dinner.cal,
+    mealTypeStats.snack.cal
+  ];
+  mealTypeChart.update();
+}
+
+// -------------------------------------------------------------
+// HISTORY
 // -------------------------------------------------------------
 function renderHistory() {
   const list = document.getElementById("meal-history");
+
   list.innerHTML = mealHistory
-    .map(m => `<li>${m.time}: ${m.calories} kcal (P:${m.protein}, F:${m.fat}, C:${m.carbs})</li>`)
+    .map(m => `
+      <li><b>${m.mealType.toUpperCase()}</b> — ${m.time}: 
+      ${m.calories} kcal (P:${m.protein}, F:${m.fat}, C:${m.carbs})</li>
+    `)
     .join("");
 }
 
 // -------------------------------------------------------------
-// EXPORT
+// EXPORT FUNCTIONS
 // -------------------------------------------------------------
 function exportCSV() {
-  let csv = "time,calories,protein,fat,carbs\n";
+  let csv = "time,mealType,calories,protein,fat,carbs\n";
 
   mealHistory.forEach(m =>
-    csv += `${m.time},${m.calories},${m.protein},${m.fat},${m.carbs}\n`
+    csv += `${m.time},${m.mealType},${m.calories},${m.protein},${m.fat},${m.carbs}\n`
   );
 
   downloadFile("nutrition_data.csv", csv);
 }
 
 function exportJSON() {
-  const data = JSON.stringify(mealHistory, null, 2);
-  downloadFile("nutrition_history.json", data);
+  downloadFile("nutrition_history.json", JSON.stringify(mealHistory, null, 2));
 }
 
 function downloadFile(filename, content) {
