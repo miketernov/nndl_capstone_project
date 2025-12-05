@@ -10,6 +10,11 @@ let dailyStats = { calories: 0, protein: 0, fat: 0, carbs: 0 };
 let dailyPlan = null;
 let mealHistory = [];
 
+// ------------------------ THEME SWITCH ------------------------
+function toggleTheme() {
+  document.documentElement.classList.toggle("light");
+}
+
 // -------------------------------------------------------------
 // LOAD MODEL
 // -------------------------------------------------------------
