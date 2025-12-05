@@ -42,6 +42,7 @@
 
     h1 { margin: 0; font-size: 26px; }
     p { margin: 0; }
+
     .section-title {
       margin: 16px 0 8px;
       font-size: 13px;
@@ -139,6 +140,7 @@
       display: flex;
       gap: 14px;
       font-size: 13px;
+      flex-wrap: wrap;
     }
 
     .meal-type-selector label {
@@ -146,6 +148,31 @@
       display: flex;
       align-items: center;
       gap: 4px;
+    }
+
+    #daily-progress {
+      margin-top: 10px;
+      padding: 12px;
+      background: #0f172a;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      font-size: 13px;
+    }
+
+    #tips {
+      margin-top: 10px;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      font-size: 13px;
+      color: #d1d5db;
+    }
+
+    #meal-history {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12px;
     }
 
     /* LIGHT THEME */
@@ -252,6 +279,12 @@
         <canvas id="mealTypeChart" height="150"></canvas>
       </div>
 
+      <!-- SUMMARY -->
+      <div class="card" style="margin-top:12px;">
+        <h3 style="font-size:14px;margin-bottom:6px;">Summary</h3>
+        <div id="summary"></div>
+      </div>
+
       <!-- HISTORY -->
       <div class="section-title">Meal history</div>
       <div class="card">
@@ -266,33 +299,28 @@
     <div>
       <h2>About the project</h2>
       <p>
-        NutritionAI uses AI to estimate the nutritional content of meals and helps users stay in control of their health.
+        NutritionAI uses a lightweight CNN trained on Nutrition5k and runs entirely in the browser with TensorFlow.js.
+        It combines personalized calorie planning with AI-based meal analysis.
       </p>
 
       <h2>Features</h2>
       <ul>
-        <li>Personalized calorie & macro plan</li>
-        <li>AI-based meal nutrition estimation</li>
-        <li>Daily dashboard</li>
-        <li>Meal type statistics</li>
-        <li>Charts & analytics</li>
-        <li>Progress tracking</li>
-        <li>Light/dark themes</li>
+        <li>Personalized calorie & macro targets</li>
+        <li>AI-based nutrient estimation from food photos</li>
+        <li>Daily dashboard & analytics</li>
+        <li>Meal type tracking (breakfast/lunch/dinner/snack)</li>
+        <li>Browser push notifications</li>
+        <li>Persistent profile & history (localStorage)</li>
+        <li>Light/dark theme</li>
+        <li>CSV/JSON export</li>
       </ul>
     </div>
   </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Chart.js datalabels plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
-  <!-- App Logic -->
   <script src="app.js"></script>
-
 </body>
 </html>
